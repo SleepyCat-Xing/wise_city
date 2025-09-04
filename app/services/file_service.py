@@ -13,7 +13,7 @@ from app.core.config import settings
 class FileService:
     """文件管理服务"""
     
-    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp'}
+    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp'}
     MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
     
     def __init__(self):

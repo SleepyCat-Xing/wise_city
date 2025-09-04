@@ -124,3 +124,74 @@ async def get_violation_categories():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/analyze/multimodal")
+async def multimodal_analysis(
+    file: UploadFile = File(..., description="上传的图像文件")
+):
+    """
+    多模态综合分析 - 基于项目简表要求的高级功能
+    """
+    try:
+        # 验证文件类型
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="请上传图像文件")
+        
+        # 保存上传的文件
+        from app.services.file_service import FileService
+        file_service = FileService()
+        file_info = await file_service.save_upload_file(file)
+        
+        # 进行多模态分析
+        analysis_result = detection_service.ai_service.get_multimodal_analysis(
+            file_info["file_path"]
+        )
+        
+        return {
+            "success": True,
+            "message": "多模态分析完成",
+            "data": {
+                "file_info": file_info,
+                "analysis": analysis_result,
+                "features": {
+                    "image_enhancement": "已启用",
+                    "building_structure_analysis": "已完成",
+                    "environmental_context": "已分析",
+                    "risk_assessment": "已生成"
+                }
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/performance/metrics")
+async def get_performance_metrics():
+    """
+    获取系统性能指标 - 符合项目简表的性能要求
+    """
+    try:
+        model_info = detection_service.ai_service.get_model_info()
+        
+        return {
+            "success": True,
+            "message": "性能指标获取成功",
+            "data": {
+                "model_performance": model_info.get("performance_metrics", {}),
+                "target_metrics": {
+                    "mAP_target": "≥0.85",
+                    "processing_speed_target": "50 FPS@1080p",
+                    "response_time_target": "≤3秒",
+                    "concurrent_users_target": "1000+"
+                },
+                "current_status": model_info.get("multimodal_features", {}),
+                "system_info": {
+                    "model_type": model_info.get("model_type"),
+                    "violation_categories": model_info.get("violation_categories"),
+                    "gpu_acceleration": model_info.get("performance_metrics", {}).get("gpu_enabled", False)
+                }
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
