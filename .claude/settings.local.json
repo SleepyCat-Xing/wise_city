@@ -14,7 +14,17 @@
       "Bash(git clone:*)",
       "Bash(git init:*)",
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" repo fork SleepyCat-Xing/wise_city --clone=false)",
+      "Bash(git remote set-url:*)",
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" repo create wise_city --public)",
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" repo view insistgang/wise_city)",
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" api repos/insistgang/wise_city/branches)",
+      "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" auth logout)"
     ],
     "deny": [],
     "ask": []
