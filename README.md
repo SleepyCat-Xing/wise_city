@@ -48,7 +48,7 @@ wise_city/
 
 1. **克隆项目**
    ```bash
-   git clone https://github.com/insistgang/wise_city.git
+   git clone https://github.com/SleepyCat-Xing/wise_city.git
    cd wise_city
    ```
 
@@ -152,7 +152,7 @@ pytest --cov=app tests/
 
 2. **部署步骤**
    ```bash
-   git clone https://github.com/insistgang/wise_city.git
+   git clone https://github.com/SleepyCat-Xing/wise_city.git
    cd wise_city
    cp .env.example .env
    # 配置生产环境变量
@@ -194,7 +194,7 @@ pytest --cov=app tests/
 
 - 项目维护者: insistgang
 - 邮箱: insistgang@163.com
-- GitHub: https://github.com/insistgang/wise_city
+- GitHub: https://github.com/SleepyCat-Xing/wise_city
 
 ## 致谢
 
