@@ -7,6 +7,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from app.core.config import settings
@@ -94,7 +95,7 @@ async def root():
         "version": settings.VERSION,
         "docs_url": "/docs",
         "redoc_url": "/redoc",
-        "demo_url": "/static/demo.html",
+        "demo_url": "/demo",
         "database_enabled": settings.DATABASE_URL is not None
     }
 
@@ -106,6 +107,10 @@ async def health_check():
         "message": "系统运行正常",
         "database_status": "connected" if db_manager._initialized and db_manager.engine else "disabled"
     }
+
+@app.get("/demo")
+async def demo_page():
+    return FileResponse("static/demo.html")
 
 if __name__ == "__main__":
     import uvicorn

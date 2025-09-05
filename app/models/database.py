@@ -49,7 +49,8 @@ class DetectionResultDB(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     
     # JSON字段存储额外信息
-    extra_data = Column(JSON)
+  # metadata = Column(JSON)
+    extra_metadata = Column("metadata", JSON)
     
     # 关系
     user = relationship("User", back_populates="detection_results")
