@@ -285,12 +285,12 @@ class LLMIntegrationService:
             
             return {
                 "violation_type": violation_type,
-                "violation_name": violation_enum.value,
+                "violation_name": violation_enum.value if hasattr(violation_enum, 'value') else str(violation_enum),
                 "applicable_laws_count": len(regulations),
                 "primary_regulations": [
                     {
                         "title": reg.title,
-                        "level": reg.level.value,
+                        "level": reg.level.value if hasattr(reg.level, 'value') else str(reg.level),
                         "effective_date": reg.effective_date.isoformat(),
                         "keywords": reg.keywords
                     } for reg in regulations[:2]
@@ -311,9 +311,9 @@ class LLMIntegrationService:
                 {
                     "regulation_id": reg.regulation_id,
                     "title": reg.title,
-                    "level": reg.level.value,
+                    "level": reg.level.value if hasattr(reg.level, 'value') else str(reg.level),
                     "content_excerpt": reg.content[:200] + "..." if len(reg.content) > 200 else reg.content,
-                    "applicable_violations": [vt.value for vt in reg.applicable_violations],
+                    "applicable_violations": [vt.value if hasattr(vt, 'value') else str(vt) for vt in reg.applicable_violations],
                     "keywords": reg.keywords
                 } for reg in regulations
             ]

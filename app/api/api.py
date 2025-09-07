@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import detection, system, files, legal
+from app.api.v1 import detection, system, files, legal, test_legal
 
 api_router = APIRouter()
 
@@ -26,4 +26,10 @@ api_router.include_router(
     files.router, 
     prefix="/files", 
     tags=["文件管理"]
+)
+
+api_router.include_router(
+    test_legal.router,
+    prefix="/legal",
+    tags=["法规测试"]
 )

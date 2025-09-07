@@ -87,9 +87,16 @@ class AIService:
     def load_model(self):
         """加载增强的YOLOv8模型"""
         try:
-            if os.path.exists(settings.MODEL_PATH):
+            # 优先使用我们训练好的分类模型
+            classification_model_path = 'models/illegal_building_classification/weights/best.pt'
+            if os.path.exists(classification_model_path):
+                self.model = YOLO(classification_model_path)
+                print(f"加载训练好的违章建筑分类模型: {classification_model_path}")
+                self.model_type = "classification"
+            elif os.path.exists(settings.MODEL_PATH):
                 self.model = YOLO(settings.MODEL_PATH)
                 print(f"专用违章建筑检测模型已加载: {settings.MODEL_PATH}")
+                self.model_type = "detection"
             else:
                 # 优先使用更大的预训练模型以获得更好性能
                 model_variants = ['yolov8x.pt', 'yolov8l.pt', 'yolov8m.pt', 'yolov8s.pt', 'yolov8n.pt']
@@ -99,6 +106,7 @@ class AIService:
                     try:
                         self.model = YOLO(model_name)
                         print(f"使用YOLOv8预训练模型: {model_name}")
+                        self.model_type = "detection"
                         model_loaded = True
                         break
                     except Exception as e:
@@ -186,55 +194,107 @@ class AIService:
             )
             
             detections = []
-            for result in results:
-                boxes = result.boxes
-                if boxes is not None:
-                    for box in boxes:
-                        # 获取边界框坐标
-                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                        confidence = float(box.conf[0].cpu().numpy())
-                        class_id = int(box.cls[0].cpu().numpy())
-                        
-                        # 获取类别名称
+            
+            # 检查模型类型并处理结果
+            if hasattr(self, 'model_type') and self.model_type == "classification":
+                # 处理分类模型结果
+                for result in results:
+                    if hasattr(result, 'probs') and result.probs is not None:
+                        # 获取分类结果
+                        probs = result.probs
+                        class_id = int(probs.top1)
+                        confidence = float(probs.top1conf)
                         class_name = self.model.names[class_id]
                         
-                        # 创建BoundingBox对象
-                        bbox = BoundingBox(
-                            x=float(x1),
-                            y=float(y1),
-                            width=float(x2 - x1),
-                            height=float(y2 - y1)
-                        )
-                        
-                        # 计算面积
-                        area = bbox.width * bbox.height
-                        
-                        # 违章分类
-                        violation_category = None
-                        severity = None
-                        description = None
-                        
-                        if enable_violation_classification:
-                            violation_category = self._classify_violation(class_name, bbox, image.shape)
-                            if violation_category:
-                                violation_info = get_violation_info(violation_category)
-                                if violation_info:
-                                    severity = violation_info.severity_level
-                                    description = violation_info.description
-                        
-                        # 创建ViolationDetection对象
-                        detection = ViolationDetection(
-                            class_id=class_id,
-                            class_name=class_name,
-                            violation_category=violation_category,
-                            confidence=confidence,
-                            bbox=bbox,
-                            area=area,
-                            severity=severity,
-                            description=description
-                        )
-                        
-                        detections.append(detection)
+                        # 只有当检测到建筑物且置信度超过阈值时才创建检测
+                        if class_name == "building" and confidence >= confidence_threshold:
+                            # 为整个图像创建一个边界框
+                            height, width = image.shape[:2]
+                            bbox = BoundingBox(
+                                x=0.0,
+                                y=0.0,
+                                width=float(width),
+                                height=float(height)
+                            )
+                            
+                            # 计算面积
+                            area = bbox.width * bbox.height
+                            
+                            # 违章分类
+                            violation_category = None
+                            severity = None
+                            description = None
+                            
+                            if enable_violation_classification:
+                                violation_category = self._classify_violation(class_name, bbox, image.shape)
+                                if violation_category:
+                                    violation_info = get_violation_info(violation_category)
+                                    if violation_info:
+                                        severity = violation_info.severity_level
+                                        description = violation_info.description
+                            
+                            # 创建ViolationDetection对象
+                            detection = ViolationDetection(
+                                class_id=class_id,
+                                class_name=class_name,
+                                violation_category=violation_category,
+                                confidence=confidence,
+                                bbox=bbox,
+                                area=area,
+                                severity=severity,
+                                description=description
+                            )
+                            detections.append(detection)
+            else:
+                # 处理检测模型结果（原有逻辑）
+                for result in results:
+                    boxes = result.boxes
+                    if boxes is not None:
+                        for box in boxes:
+                            # 获取边界框坐标
+                            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                            confidence = float(box.conf[0].cpu().numpy())
+                            class_id = int(box.cls[0].cpu().numpy())
+                            
+                            # 获取类别名称
+                            class_name = self.model.names[class_id]
+                            
+                            # 创建BoundingBox对象
+                            bbox = BoundingBox(
+                                x=float(x1),
+                                y=float(y1),
+                                width=float(x2 - x1),
+                                height=float(y2 - y1)
+                            )
+                            
+                            # 计算面积
+                            area = bbox.width * bbox.height
+                            
+                            # 违章分类
+                            violation_category = None
+                            severity = None
+                            description = None
+                            
+                            if enable_violation_classification:
+                                violation_category = self._classify_violation(class_name, bbox, image.shape)
+                                if violation_category:
+                                    violation_info = get_violation_info(violation_category)
+                                    if violation_info:
+                                        severity = violation_info.severity_level
+                                        description = violation_info.description
+                            
+                            # 创建ViolationDetection对象
+                            detection = ViolationDetection(
+                                class_id=class_id,
+                                class_name=class_name,
+                                violation_category=violation_category,
+                                confidence=confidence,
+                                bbox=bbox,
+                                area=area,
+                                severity=severity,
+                                description=description
+                            )
+                            detections.append(detection)
             
             processing_time = time.time() - start_time
             return detections, processing_time
@@ -306,9 +366,19 @@ class AIService:
         
         performance_info = self.model_performance.copy() if self.model_performance else {}
         
+        # 获取实际模型类型和路径
+        model_type = getattr(self, 'model_type', 'unknown')
+        if model_type == "classification":
+            model_path = 'models/illegal_building_classification/weights/best.pt'
+            model_description = "违章建筑分类模型 (训练版)"
+        else:
+            model_path = settings.MODEL_PATH
+            model_description = "Enhanced YOLOv8 for Building Violation Detection"
+        
         return {
-            "model_type": "Enhanced YOLOv8 for Building Violation Detection",
-            "model_path": settings.MODEL_PATH,
+            "model_type": model_type,
+            "model_description": model_description,
+            "model_path": model_path,
             "classes": list(self.model.names.values()) if self.model.names else [],
             "confidence_threshold": settings.CONFIDENCE_THRESHOLD,
             "iou_threshold": settings.IOU_THRESHOLD,

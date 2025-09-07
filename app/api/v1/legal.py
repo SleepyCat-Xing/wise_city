@@ -248,6 +248,138 @@ async def get_llm_status():
         raise HTTPException(status_code=500, detail=f"获取LLM状态失败: {str(e)}")
 
 
+@router.get("/knowledge-graph")
+async def get_knowledge_graph():
+    """
+    获取法规知识图谱数据
+    """
+    try:
+        knowledge_graph = legal_service.knowledge_base.get_knowledge_graph()
+        
+        return {
+            "success": True,
+            "message": "知识图谱数据获取成功",
+            "data": knowledge_graph
+        }
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in knowledge graph: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"获取知识图谱失败: {str(e)}")
+
+
+@router.get("/law-categories/summary")
+async def get_law_categories_summary():
+    """
+    获取法律法规类别摘要
+    """
+    try:
+        summary = legal_service.knowledge_base.get_law_categories_summary()
+        
+        return {
+            "success": True,
+            "message": "法规类别摘要获取成功",
+            "data": summary
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取法规类别摘要失败: {str(e)}")
+
+
+@router.get("/knowledge-insights")
+async def get_knowledge_insights():
+    """
+    获取法律知识图谱洞察分析
+    """
+    try:
+        insights = legal_service.knowledge_base.get_legal_knowledge_insights()
+        
+        return {
+            "success": True,
+            "message": "知识洞察分析获取成功",
+            "data": insights
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取知识洞察失败: {str(e)}")
+
+
+@router.get("/specific-law/{law_name}/details")
+async def get_specific_law_details(law_name: str):
+    """
+    获取特定法律的详细信息
+    """
+    try:
+        # 映射法律名称到类别
+        law_mapping = {
+            "城乡规划法": "urban_rural_planning",
+            "建筑法": "construction_law", 
+            "土地管理法": "land_management",
+            "城市管理条例": "urban_management",
+            "交通管理法规": "traffic_management",
+            "商业管理法规": "commercial_regulation"
+        }
+        
+        category_name = law_mapping.get(law_name)
+        if not category_name:
+            raise HTTPException(status_code=404, detail=f"未找到法律: {law_name}")
+        
+        regulations = legal_service.knowledge_base.regulations.get(category_name, [])
+        
+        if not regulations:
+            raise HTTPException(status_code=404, detail=f"该法律暂无法规数据: {law_name}")
+        
+        # 统计该法律的覆盖情况
+        violation_types = set()
+        for regulation in regulations:
+            for violation_type in regulation.applicable_violations:
+                # 安全地获取violation_type的值，处理枚举和字符串两种情况
+                if hasattr(violation_type, 'value'):
+                    violation_types.add(violation_type.value)
+                else:
+                    violation_types.add(str(violation_type))
+        
+        law_details = {
+            "law_name": law_name,
+            "category_name": category_name,
+            "display_name": legal_service.knowledge_base._get_category_display_name(category_name),
+            "color": legal_service.knowledge_base._get_category_color(category_name),
+            "total_regulations": len(regulations),
+            "covered_violation_types": list(violation_types),
+            "violation_coverage_count": len(violation_types),
+            "regulations": [
+                {
+                    "id": reg.regulation_id,
+                    "title": reg.title,
+                    "content": reg.content,
+                    "level": reg.level.value if hasattr(reg.level, 'value') else str(reg.level),
+                    "effective_date": reg.effective_date.isoformat(),
+                    "penalty_description": reg.penalty_description,
+                    "enforcement_procedure": reg.enforcement_procedure,
+                    "keywords": reg.keywords,
+                    "applicable_violations": [vt.value if hasattr(vt, 'value') else str(vt) for vt in reg.applicable_violations]
+                }
+                for reg in regulations
+            ],
+            "legal_advice_sample": legal_service.knowledge_base.get_legal_advice(
+                list(regulations[0].applicable_violations)[0] if regulations[0].applicable_violations 
+                else next(iter(violation_types), "illegal_construction")
+            ).dict()
+        }
+        
+        return {
+            "success": True,
+            "message": f"{law_name}详细信息获取成功",
+            "data": law_details
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取法律详情失败: {str(e)}")
+
+
 @router.post("/demo/mock-llm-analysis")
 async def demo_mock_llm_analysis(violation_description: str = Form(...)):
     """
